@@ -55,19 +55,41 @@ class AwsRekognition extends Controller
         $rekognition = new RekognitionClient($options);
 
         // Get local image
-        $photo1 = $request->file("file1")->getPathname();
+        // if($request->file("file1")){
+
+        // }else{
+        $image1 = substr($request->get("data1"),22, strlen($request->get("data1")));
+        $image2 = substr($request->get("data2"),22, strlen($request->get("data2")));
+        $bin = base64_decode($image1);
+        $im1 = imageCreateFromString($bin);
+        $image1 = public_path().'/img/image1.png';
+        imagepng($im1, $image1, 0);
+        $bin = base64_decode($image2);
+        $im2 = imageCreateFromString($bin);
+        $image2 = public_path().'/img/image2.png';
+        imagepng($im2, $image2, 0);
+
+        // }
+        $photo1 = $image1;
         $fp_image1 = fopen($photo1, 'r');
         $image1 = fread($fp_image1, filesize($photo1));
         fclose($fp_image1);
-        $photo2 = $request->file("file2")->getPathname();
+        $photo2 = $image2;
         $fp_image2 = fopen($photo2, 'r');
         $image2 = fread($fp_image2, filesize($photo2));
         fclose($fp_image2);
-
+        // $photo1 = $request->file("file1")->getPathname();
+        // $fp_image1 = fopen($photo1, 'r');
+        // $image1 = fread($fp_image1, filesize($photo1));
+        // fclose($fp_image1);
+        // $photo2 = $request->file("file2")->getPathname();
+        // $fp_image2 = fopen($photo2, 'r');
+        // $image2 = fread($fp_image2, filesize($photo2));
+        // fclose($fp_image2);
         // Call DetectFaces
         $result = $rekognition->compareFaces([
             'QualityFilter' => 'HIGH',
-            'SimilarityThreshold' => 0,
+            'SimilarityThreshold' => 50,
             'SourceImage' => [
                 'Bytes' => $image1,
             ],
@@ -75,17 +97,7 @@ class AwsRekognition extends Controller
                 'Bytes' => $image2,
             ],
         ]);
-
-        // Display info for each detected person
-        // print 'People: Image position and estimated age' . "<>";
         return response()->json(["original" => $result["SourceImageFace"], "coincidencias" => $result["FaceMatches"]]);
-        // dump($result->data);
-        // dump($result["TextDetections"]);
-        // for ($i=0; $i < count($result["TextDetections"]); $i++) {
-        //     $data = $result["TextDetections"][$i];
-        //     // if($data["Type"] == "LINE"){
-        //         echo $data["DetectedText"]."<br>";
-        //     // }
-        // }
+
     }
 }

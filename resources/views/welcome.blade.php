@@ -29,23 +29,33 @@
                             </div>
                         </div>
                     </div>
-                    <form id="imagenes" enctype="multipart/form-data">
-                        <div class="row">
-                            <div class="col form-group">
-                                <label for="file1">Archivo 1</label>
-                                <input type="file" name="file1" class="form-control-file" onchange="tipo(this, 1)" id="file1">
+                    <div class="row">
+
+                        <form id="imagenes" enctype="multipart/form-data">
+                            <div class="row">
+                                <input type="hidden" name="data1" id="data1">
+                                <input type="hidden" name="data2" id="data2">
+                                {{-- <div class="col form-group">
+                                    <label for="file1">Archivo 1</label>
+                                    <input type="file" name="file1" class="form-control-file" onchange="tipo(this, 1)" id="file1">
+                                </div>
+                                <div class="col form-group">
+                                    <label for="file2">Archivo 2</label>
+                                    <input type="file" class="form-control-file" name="file2" onchange="tipo(this, 2)" id="file2">
+                                </div> --}}
                             </div>
-                            <div class="col form-group">
-                                <label for="file2">Archivo 2</label>
-                                <input type="file" class="form-control-file" name="file2" onchange="tipo(this, 2)" id="file2">
+                            <div class="row">
+                                <div class="col">
+                                    <button class="btn btn-primary" type="button" onclick="enviar()">Subir</button>
+                                </div>
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col">
-                                <button class="btn btn-primary" type="button" onclick="enviar()">Subir</button>
-                            </div>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
+                    <div class="row">
+                        <video id="video"></video>
+                        <button id="startbutton">Take photo</button>
+                        <canvas id="canvas" style="display: none"></canvas>
+                    </div>
                 </div>
             </div>
 
@@ -91,6 +101,9 @@
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 }
             }).done((aws) => {
+                if (aws.coincidencias.length==0) {
+                    alert("No se encontraron coincidencias")
+                } else {
                 $("#photo1").append(`
                     <div id="id1" style='
                         width: ${(aws.original.BoundingBox.Width*100).toFixed(2)}%;
@@ -108,8 +121,81 @@
                         top: ${(aws.coincidencias[0].Face.BoundingBox.Top*100).toFixed(2)}%;
                         left: ${(aws.coincidencias[0].Face.BoundingBox.Left*100).toFixed(2)}%;
                         border: 5px dashed orange;'></div>`)
-            });
+                }
+             });
         }
+
+        (function() {
+            var firstPhoto = false;
+            var streaming = false,
+                video        = document.querySelector('#video'),
+                canvas       = document.querySelector('#canvas'),
+                photo1       = document.querySelector('#img1'),
+                photo2       = document.querySelector('#img2'),
+                data1        = document.querySelector('#data1'),
+                data2        = document.querySelector('#data2'),
+                startbutton  = document.querySelector('#startbutton'),
+                width = 320,
+                height = 0;
+
+            navigator.getMedia = ( navigator.getUserMedia ||
+                                navigator.webkitGetUserMedia ||
+                                navigator.mozGetUserMedia ||
+                                navigator.msGetUserMedia);
+
+            navigator.getMedia(
+            {
+                video: true,
+                audio: false
+            },
+            function(stream) {
+                if (navigator.mozGetUserMedia) {
+                    video.mozSrcObject = stream;
+                } else {
+                    // var vendorURL = window.webkitURL;
+                    video.srcObject = stream;
+                }
+                video.play();
+            },
+            function(err) {
+                console.log("An error occured! " + err);
+            }
+            );
+
+            video.addEventListener('canplay', function(ev){
+            if (!streaming) {
+                height = video.videoHeight / (video.videoWidth/width);
+                video.setAttribute('width', width);
+                video.setAttribute('height', height);
+                canvas.setAttribute('width', width);
+                canvas.setAttribute('height', height);
+                streaming = true;
+            }
+            }, false);
+
+            function takepicture() {
+                $("#id1").remove()
+                $("#id2").remove()
+                canvas.width = width;
+                canvas.height = height;
+                canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+                var data = canvas.toDataURL('image/png');
+                if(!firstPhoto){
+                    photo1.setAttribute('src', data);
+                    data1.value =  data;
+                }else{
+                    photo2.setAttribute('src', data);
+                    data2.value =  data;
+                }
+                firstPhoto = !firstPhoto
+            }
+
+            startbutton.addEventListener('click', function(ev){
+                takepicture();
+            ev.preventDefault();
+            }, false);
+
+            })();
     </script>
 
     </body>
